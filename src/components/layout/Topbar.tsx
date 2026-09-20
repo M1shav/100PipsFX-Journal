@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useRef } from 'react';
-import { Search, Moon, Sun, Plus, Bell, Clock, PenLine, RefreshCw, BarChart2, ChevronDown } from 'lucide-react';
+import { Search, Moon, Sun, Plus, Bell, Clock, PenLine, RefreshCw, BarChart2, ChevronDown, ChevronUp, User, Settings as SettingsIcon, CreditCard, HelpCircle, LogOut } from 'lucide-react';
 import type { Trade } from '../../types/trade';
+import type { UserProfile } from '../../types/user';
 import AddTradeModal from '../dashboard/AddTradeModal';
 
 interface TopbarProps {
@@ -8,13 +9,17 @@ interface TopbarProps {
   onNavigate: (page: string) => void;
   isDark?: boolean;
   onToggleTheme?: () => void;
+  profile?: UserProfile;
 }
 
-export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggleTheme }: TopbarProps) {
+export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggleTheme, profile }: TopbarProps) {
   const [time, setTime] = useState('');
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [addTradeOpen, setAddTradeOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  
+  const quickActionsRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updateTime = () => setTime(new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' }));
@@ -25,15 +30,17 @@ export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggle
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
         setQuickActionsOpen(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- NEW: LISTEN FOR EXTERNAL ADD TRADE REQUESTS ---
   useEffect(() => {
     const handleOpenAddTrade = () => setAddTradeOpen(true);
     window.addEventListener('openAddTrade', handleOpenAddTrade);
@@ -41,6 +48,11 @@ export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggle
   }, []);
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // Safe fallback for profile data
+  const displayName = profile?.displayName || 'Setup Profile';
+  const usernameEmail = profile?.username || '';
+  const avatarText = displayName.charAt(0).toUpperCase() || '?';
 
   return (
     <>
@@ -67,7 +79,6 @@ export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggle
         </div>
 
         <div className="flex items-center gap-3 relative">
-          {/* Theme Toggle Button */}
           <button 
             onClick={onToggleTheme}
             title={isDark ? "Switch to light mode" : "Switch to dark mode"}
@@ -78,9 +89,12 @@ export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggle
             {isDark ? <Moon className="w-4 h-4 text-purple-400 group-hover:text-purple-300" /> : <Sun className="w-4 h-4 text-amber-500" />}
           </button>
 
-          <div ref={menuRef} className="relative">
+          <div ref={quickActionsRef} className="relative">
             <button 
-              onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+              onClick={() => {
+                setQuickActionsOpen(!quickActionsOpen);
+                setProfileMenuOpen(false);
+              }}
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
                 quickActionsOpen ? 'bg-brand/90 text-white shadow-[0_0_15px_rgba(10,132,255,0.4)]' : 'bg-brand hover:bg-brand/90 text-white shadow-[0_0_15px_rgba(10,132,255,0.25)]'
               }`}
@@ -88,7 +102,6 @@ export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggle
               <Plus className="w-5 h-5" />
             </button>
 
-            {/* Quick Actions Dropdown */}
             {quickActionsOpen && (
               <div className={`absolute right-0 top-12 w-64 border rounded-[20px] shadow-2xl p-2 z-50 flex flex-col ${
                 isDark ? 'bg-[#0A0A0A] border-[#1C1C1C]' : 'bg-white border-[#E5E5EA]'
@@ -159,18 +172,127 @@ export default function Topbar({ onAddTrade, onNavigate, isDark = true, onToggle
             <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand rounded-full"></div>
           </button>
 
-          <button
-            type="button"
-            aria-label="Account menu"
-            className={`h-9 w-[72px] rounded-xl border flex items-center justify-between px-2 cursor-pointer ml-1 transition-colors ${
-              isDark ? 'bg-surface2 border-border hover:border-[#2C2C2E]' : 'bg-[#F0F1F3] border-[#E5E5EA]'
-            }`}
-          >
-            <span className="w-6 h-6 rounded-lg bg-brand flex items-center justify-center shadow-[0_0_10px_rgba(10,132,255,0.2)]">
-              <span className="w-2 h-2 bg-white rounded-sm" />
-            </span>
-            <ChevronDown className="w-3.5 h-3.5 text-muted" />
-          </button>
+          {/* Profile Button & Dropdown Container */}
+          <div ref={profileMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setProfileMenuOpen(!profileMenuOpen);
+                setQuickActionsOpen(false);
+              }}
+              aria-label="Account menu"
+              className={`h-9 w-[72px] rounded-xl border flex items-center justify-between px-2 cursor-pointer ml-1 transition-all ${
+                profileMenuOpen 
+                  ? (isDark ? 'bg-[#1C1C1E] border-[#333]' : 'bg-[#EAEAEA] border-[#D1D1D6]')
+                  : (isDark ? 'bg-surface2 border-border hover:border-[#2C2C2E]' : 'bg-[#F0F1F3] border-[#E5E5EA]')
+              }`}
+            >
+              <div className="w-6 h-6 rounded-lg bg-[#0A84FF] flex items-center justify-center shadow-sm overflow-hidden text-white font-bold text-[11px]">
+                {profile?.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  avatarText
+                )}
+              </div>
+              {profileMenuOpen ? (
+                <ChevronUp className="w-3.5 h-3.5 text-muted" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-muted" />
+              )}
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {profileMenuOpen && (
+              <div className={`absolute right-0 top-12 w-[240px] border rounded-[20px] shadow-2xl p-2 z-50 flex flex-col ${
+                isDark ? 'bg-[#121212] border-[#2C2C2E]' : 'bg-white border-[#E5E5EA]'
+              }`}>
+                {/* Profile Header */}
+                <div className="flex items-center gap-3 px-3 py-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-[#0A84FF] flex items-center justify-center shrink-0 overflow-hidden text-white font-bold text-[16px]">
+                    {profile?.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      avatarText
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[14px] font-bold truncate ${isDark ? 'text-textMain' : 'text-[#111111]'}`}>
+                        {displayName}
+                      </span>
+                      <span className="text-[8px] font-bold border border-muted/30 text-muted px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 bg-[#1C1C1E]">
+                        Free
+                      </span>
+                    </div>
+                    <span className="text-[12px] text-muted truncate">
+                      {usernameEmail}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={`h-[1px] w-full mb-1 ${isDark ? 'bg-[#1C1C1E]' : 'bg-[#E5E5EA]'}`}></div>
+
+                {/* Main Links */}
+                <div className="space-y-0.5 py-1">
+                  <button 
+                    onClick={() => { setProfileMenuOpen(false); onNavigate('Profile'); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
+                      isDark ? 'hover:bg-[#1C1C1E] text-[#EBEBF5]' : 'hover:bg-[#F4F5F7] text-[#111111]'
+                    }`}
+                  >
+                    <User className="w-4 h-4 text-[#8E8E93]" />
+                    <span className="text-[13px] font-medium">My Profile</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setProfileMenuOpen(false); /* Safe stub */ }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
+                      isDark ? 'hover:bg-[#1C1C1E] text-[#EBEBF5]' : 'hover:bg-[#F4F5F7] text-[#111111]'
+                    }`}
+                  >
+                    <SettingsIcon className="w-4 h-4 text-[#8E8E93]" />
+                    <span className="text-[13px] font-medium">Settings</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setProfileMenuOpen(false); /* Safe stub */ }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
+                      isDark ? 'hover:bg-[#1C1C1E] text-[#EBEBF5]' : 'hover:bg-[#F4F5F7] text-[#111111]'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4 text-[#8E8E93]" />
+                    <span className="text-[13px] font-medium">Subscription</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setProfileMenuOpen(false); /* Safe stub */ }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
+                      isDark ? 'hover:bg-[#1C1C1E] text-[#EBEBF5]' : 'hover:bg-[#F4F5F7] text-[#111111]'
+                    }`}
+                  >
+                    <HelpCircle className="w-4 h-4 text-[#8E8E93]" />
+                    <span className="text-[13px] font-medium">Help & Support</span>
+                  </button>
+                </div>
+
+                <div className={`h-[1px] w-full my-1 ${isDark ? 'bg-[#1C1C1E]' : 'bg-[#E5E5EA]'}`}></div>
+
+                {/* Sign Out */}
+                <div className="py-1">
+                  <button 
+                    onClick={() => { setProfileMenuOpen(false); /* Safe stub */ }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
+                      isDark ? 'hover:bg-[#FF453A]/10 text-[#FF453A]' : 'hover:bg-[#FF3B30]/10 text-[#FF3B30]'
+                    }`}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="text-[13px] font-medium">Sign Out</span>
+                  </button>
+                </div>
+
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

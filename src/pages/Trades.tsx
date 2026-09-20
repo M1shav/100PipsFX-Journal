@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Share2, Trash2, Edit2, PenLine, AlertTriangle, X, TrendingUp, TrendingDown, Calendar, Filter, Plus } from 'lucide-react';
 import type { Trade } from '../types/trade';
 import { processTrade } from '../utils/tradingCalculations';
-import AddTradeModal from '../components/dashboard/addtrademodal'; // Import modal for editing
+import AddTradeModal from '../components/dashboard/addtrademodal';
+import PairIcon from '../components/ui/PairIcon'; // NEW IMPORT
 
 interface TradesProps {
   trades: Trade[];
@@ -84,13 +85,11 @@ export default function Trades({ trades, onUpdateTrade, onDeleteTrade, onClearAl
     window.dispatchEvent(new CustomEvent('openAddTrade'));
   };
 
-  // Logic for Edit button
   const handleEditClick = (trade: Trade) => {
     setEditingTrade(trade);
     setIsEditModalOpen(true);
   };
 
-  // Logic for Share button
   const handleShareClick = async (trade: Trade) => {
     const safePnl = Number(trade.pnl) || 0;
     const pnlPrefix = safePnl >= 0 ? '+' : '−';
@@ -180,7 +179,7 @@ export default function Trades({ trades, onUpdateTrade, onDeleteTrade, onClearAl
       <div className="bg-[#0A0A0A] border border-[#1C1C1C] rounded-[24px] flex flex-col overflow-hidden">
         
         <div className="p-6 border-b border-[#1C1C1C]">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h2 className="text-[16px] font-bold text-textMain tracking-tight">Trade History</h2>
               <span className="text-[12px] font-medium text-muted">
@@ -196,14 +195,6 @@ export default function Trades({ trades, onUpdateTrade, onDeleteTrade, onClearAl
             </button>
           </div>
 
-          {/* Blue Info Bar */}
-          <div className="w-full bg-[#0A84FF]/10 border border-[#0A84FF]/20 rounded-xl p-4 flex items-center">
-            <span className="text-[13px] text-[#0A84FF]">
-              Free plan loads <strong className="font-bold">your last 15 trades</strong>. Upgrade to Pro to unlock full history and longer timeframes.
-            </span>
-          </div>
-
-          {/* Collapsible Filters */}
           {filtersOpen && (
             <div className="flex flex-col gap-6 relative mt-6 animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex flex-wrap gap-8">
@@ -252,15 +243,15 @@ export default function Trades({ trades, onUpdateTrade, onDeleteTrade, onClearAl
           <table className="w-full text-left min-w-[1100px]">
             <thead className="bg-[#0A0A0A] shadow-[0_1px_0_#1C1C1C]">
               <tr>
-                <th className="py-4 px-6 text-[10px] font-bold text-muted uppercase tracking-wider text-left w-[200px]">Open / Close</th>
-                <th className="py-4 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-left">Symbol</th>
-                <th className="py-4 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-left">Type</th>
-                <th className="py-4 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-left">Entry</th>
-                <th className="py-4 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-left">Exit</th>
-                <th className="py-4 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-left">Size</th>
-                <th className="py-4 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-left">P&L</th>
-                <th className="py-4 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-left">Source</th>
-                <th className="py-4 px-6 text-[10px] font-bold text-muted uppercase tracking-wider text-right"></th>
+                <th className="py-4 px-6 text-[11px] font-bold text-muted uppercase tracking-wider text-left w-[200px]">Open / Close</th>
+                <th className="py-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider text-left">Symbol</th>
+                <th className="py-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider text-left">Type</th>
+                <th className="py-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider text-left">Entry</th>
+                <th className="py-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider text-left">Exit</th>
+                <th className="py-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider text-left">Size</th>
+                <th className="py-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider text-left">P&L</th>
+                <th className="py-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider text-left">Source</th>
+                <th className="py-4 px-6 text-[11px] font-bold text-muted uppercase tracking-wider text-right"></th>
               </tr>
             </thead>
             <tbody>
@@ -276,72 +267,64 @@ export default function Trades({ trades, onUpdateTrade, onDeleteTrade, onClearAl
 
                 const isWinner = safePnl >= 0 && safeStatus === 'CLOSED';
                 const isLoser = safePnl < 0 && safeStatus === 'CLOSED';
-                const pnlColor = isWinner ? 'text-brand' : isLoser ? 'text-loss' : 'text-textMain';
-
-                const isGold = safePair.includes('XAU');
-                const isEuroOrPound = safePair.includes('EUR') || safePair.includes('GBP');
-                const badgeColor = isGold ? 'bg-[#FFCC00]/20 text-[#FFD700]' : isEuroOrPound ? 'bg-[#00247D]/30 text-[#6699FF]' : 'bg-surface2 text-white border border-[#333]';
+                const pnlColor = isWinner ? 'text-[#4DA6FF]' : isLoser ? 'text-loss' : 'text-textMain';
 
                 return (
                   <tr key={safeId} className="border-b border-[#1C1C1C] hover:bg-[#121212] transition-colors group">
                     <td className="py-4 px-6">
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-[12px]">
-                          <span className="text-muted">Open:</span>
-                          <span className="text-textMain font-medium">{formatRowDate(trade.date)}</span>
+                        <div className="flex items-center gap-1.5 text-[13px]">
+                          <span className="text-muted font-semibold">Open:</span>
+                          <span className="text-textMain font-bold">{formatRowDate(trade.date)}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[12px]">
-                          <span className="text-muted">Close:</span>
-                          <span className="text-textMain font-medium">{safeStatus === 'CLOSED' ? formatRowDate(trade.date) : '—'}</span>
+                        <div className="flex items-center gap-1.5 text-[13px]">
+                          <span className="text-muted font-semibold">Close:</span>
+                          <span className="text-textMain font-bold">{safeStatus === 'CLOSED' ? formatRowDate(trade.date) : '—'}</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm ${badgeColor}`}>
-                          {safePair.charAt(0) || '?'}
-                        </div>
-                        <span className="text-[14px] font-bold text-textMain">{safePair}</span>
+                        
+                        {/* INSERTED THE NEW PAIR ICON COMPONENT HERE */}
+                        <PairIcon symbol={safePair} />
+                        
+                        <span className="text-[15px] font-extrabold text-textMain">{safePair}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-bold border ${
-                        safeDirection === 'LONG' ? 'bg-brand/10 text-brand border-brand/20' : 'bg-loss/10 text-loss border-loss/20'
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-extrabold border ${
+                        safeDirection === 'LONG' ? 'bg-[#0A84FF]/10 text-[#4DA6FF] border-[#0A84FF]/20' : 'bg-loss/10 text-loss border-loss/20'
                       }`}>
                         {safeDirection === 'LONG' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                         {safeDirection === 'LONG' ? 'Long' : 'Short'}
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-[13px] font-bold text-textMain">
+                    <td className="py-4 px-4 text-[14px] font-extrabold text-textMain">
                       ${safeEntry.toFixed(2)}
                     </td>
-                    <td className="py-4 px-4 text-[13px] font-bold text-textMain">
+                    <td className="py-4 px-4 text-[14px] font-extrabold text-textMain">
                       {safeStatus === 'CLOSED' ? `$${safeExit.toFixed(2)}` : '—'}
                     </td>
-                    <td className="py-4 px-4 text-[13px] font-bold text-textMain">
+                    <td className="py-4 px-4 text-[14px] font-extrabold text-textMain">
                       {safeLot}
                     </td>
-                    <td className={`py-4 px-4 text-[14px] font-bold ${pnlColor}`}>
+                    <td className={`py-4 px-4 text-[16px] font-black tracking-tight ${pnlColor}`}>
                       {safeStatus === 'CLOSED' ? `${safePnl >= 0 ? '+' : '−'}$${Math.abs(safePnl).toFixed(2)}` : '—'}
                     </td>
                     <td className="py-4 px-4">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#8A2BE2]/10 border border-[#8A2BE2]/20 text-[#8A2BE2] text-[11px] font-bold tracking-wide">
-                        <PenLine className="w-3 h-3" /> Manual
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#8A2BE2]/10 border border-[#8A2BE2]/20 text-[#8A2BE2] text-[12px] font-extrabold tracking-wide">
+                        <PenLine className="w-3.5 h-3.5" /> Manual
                       </div>
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        
-                        {/* EDIT BUTTON */}
                         <button onClick={() => handleEditClick(trade)} className="text-brand/80 hover:text-brand transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        
-                        {/* SHARE BUTTON */}
                         <button onClick={() => handleShareClick(trade)} className="text-brand/80 hover:text-brand transition-colors" title="Share">
                           <Share2 className="w-4 h-4" />
                         </button>
-                        
                         <button onClick={() => onDeleteTrade(safeId)} className="text-loss/80 hover:text-loss transition-colors" title="Delete">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -370,7 +353,6 @@ export default function Trades({ trades, onUpdateTrade, onDeleteTrade, onClearAl
         </div>
       </div>
 
-      {/* CONFIRMATION MODAL */}
       {isClearConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsClearConfirmOpen(false)}></div>
@@ -407,7 +389,6 @@ export default function Trades({ trades, onUpdateTrade, onDeleteTrade, onClearAl
         </div>
       )}
 
-      {/* EDIT MODAL PORTAL */}
       {isEditModalOpen && (
         <AddTradeModal 
           onClose={() => {

@@ -129,17 +129,10 @@ export default function MonthlyCalendar({ trades, totalPnl }: MonthlyCalendarPro
     return `${prefix}$${formattedNum}`;
   };
 
-  const getResponsiveTextClass = (str: string) => {
-    const len = str.length;
-    if (len <= 4) return 'text-[11px] lg:text-[12px] tracking-tight'; 
-    if (len === 5) return 'text-[10px] lg:text-[11.5px] tracking-tight'; 
-    if (len === 6) return 'text-[9px] lg:text-[10px] tracking-tighter'; 
-    if (len === 7) return 'text-[8.5px] lg:text-[9px] tracking-tighter'; 
-    return 'text-[7.5px] tracking-tighter'; 
-  };
+  // NO MORE DYNAMIC TEXT SIZING - Constant size is applied directly in the JSX
 
   return (
-    <div className="bg-[#0A0A0A] border border-[#1C1C1C] rounded-[20px] p-5 w-full h-full flex flex-col min-w-0 box-border">
+    <div className="bg-[#0A0A0A] border border-[#1C1C1C] rounded-[24px] p-5 w-full h-full flex flex-col min-w-0 box-border">
       
       <div className="flex flex-row justify-between items-center w-full mb-4 shrink-0">
         <h2 className="text-[16px] xl:text-[18px] font-bold text-textMain tracking-tight whitespace-nowrap">
@@ -153,21 +146,20 @@ export default function MonthlyCalendar({ trades, totalPnl }: MonthlyCalendarPro
             </span>
           </div>
           
-          <div className="flex flex-row items-center gap-1.5 shrink-0">
-            <button onClick={prevMonth} aria-label="Previous month" className="p-1.5 bg-[#121212] border border-[#1C1C1C] hover:bg-[#1C1C1E] rounded-lg text-muted hover:text-white transition-colors">
+          <div className="flex flex-row items-center gap-1 bg-[#121212] border border-[#1C1C1C] rounded-xl p-1 shrink-0">
+            <button onClick={prevMonth} className="p-1 hover:bg-[#1C1C1E] rounded-lg text-muted hover:text-white transition-colors">
               <ChevronLeft className="w-4 h-4 xl:w-4 xl:h-4" />
             </button>
             <span className="text-[11px] xl:text-[12px] font-semibold text-textMain min-w-[75px] xl:min-w-[85px] text-center select-none whitespace-nowrap">
               {monthYearString}
             </span>
-            <button onClick={nextMonth} aria-label="Next month" className="p-1.5 bg-[#121212] border border-[#1C1C1C] hover:bg-[#1C1C1E] rounded-lg text-muted hover:text-white transition-colors">
+            <button onClick={nextMonth} className="p-1 hover:bg-[#1C1C1E] rounded-lg text-muted hover:text-white transition-colors">
               <ChevronRight className="w-4 h-4 xl:w-4 xl:h-4" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* justify-start keeps rows compact at the top of the container instead of stretching downwards */}
       <div className="flex flex-col flex-1 justify-start mt-1">
         
         <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(42px,0.85fr)] gap-1 mb-1.5 px-0.5">
@@ -183,7 +175,6 @@ export default function MonthlyCalendar({ trades, totalPnl }: MonthlyCalendarPro
               
               {week.days.map((day, dIdx) => {
                 const pnlStr = formatPnl(day.pnl);
-                const pnlClass = getResponsiveTextClass(pnlStr);
                 const isCurrentMonth = day.isCurrentMonth;
                 const isProfit = day.pnl > 0;
                 const isLoss = day.pnl < 0;
@@ -199,7 +190,6 @@ export default function MonthlyCalendar({ trades, totalPnl }: MonthlyCalendarPro
                 return (
                   <div 
                     key={`d-${wIdx}-${dIdx}`} 
-                    // Tightly locks height to 40-42px to replicate reference density
                     className={`relative flex flex-col justify-center px-0.5 h-[40px] lg:h-[42px] rounded-[8px] border box-border min-w-0 ${bgClass}`}
                   >
                     {isCurrentMonth && (
@@ -210,7 +200,8 @@ export default function MonthlyCalendar({ trades, totalPnl }: MonthlyCalendarPro
                         
                         <div className="w-full mt-3.5 px-[1px] box-border">
                           {day.pnl !== 0 && (
-                            <div className={`block w-full text-center whitespace-nowrap font-bold ${pnlClass} ${isProfit ? 'text-[#0A84FF]' : 'text-[#FF453A]'}`}>
+                            // STATIC CONSISTENT SIZING: font-semibold (600), fixed text size, no truncation/ellipsis
+                            <div className={`block w-full text-center whitespace-nowrap font-semibold text-[10px] xl:text-[11px] tracking-tight ${isProfit ? 'text-[#0A84FF]' : 'text-[#FF453A]'}`}>
                               {pnlStr}
                             </div>
                           )}
@@ -230,7 +221,8 @@ export default function MonthlyCalendar({ trades, totalPnl }: MonthlyCalendarPro
                   <div className="flex flex-col items-center justify-center bg-[#121212] border border-[#1C1C1E] rounded-[8px] h-[40px] lg:h-[42px] px-0.5 box-border min-w-0">
                     <span className="text-[7px] xl:text-[8px] font-bold text-[#4A4A4A] uppercase tracking-wider mb-[3px] leading-none">WEEKLY</span>
                     <div className="w-full px-[1px] box-border">
-                      <div className={`block w-full text-center whitespace-nowrap font-bold ${getResponsiveTextClass(weeklyPnlStr)} ${isWProfit ? 'text-[#0A84FF]' : isWLoss ? 'text-[#FF453A]' : 'text-[#8E8E93]'}`}>
+                      {/* STATIC CONSISTENT SIZING APPLIED TO WEEKLY COLUMN AS WELL */}
+                      <div className={`block w-full text-center whitespace-nowrap font-semibold text-[10px] xl:text-[11px] tracking-tight ${isWProfit ? 'text-[#0A84FF]' : isWLoss ? 'text-[#FF453A]' : 'text-[#8E8E93]'}`}>
                         {weeklyPnlStr}
                       </div>
                     </div>
@@ -246,7 +238,6 @@ export default function MonthlyCalendar({ trades, totalPnl }: MonthlyCalendarPro
         </div>
       </div>
 
-      {/* mt-auto pushes the legend naturally to the bottom */}
       <div className="flex items-center justify-center gap-6 mt-auto pt-4 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-[#0A84FF]"></div>

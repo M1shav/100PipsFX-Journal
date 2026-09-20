@@ -6,6 +6,7 @@ import MonthlyCalendar from '../components/dashboard/MonthlyCalendar';
 import OpenPositions from '../components/dashboard/OpenPositions';
 import RecentActivity from '../components/dashboard/RecentActivity';
 import TopPerformers from '../components/dashboard/TopPerformers';
+import QuickStats from '../components/dashboard/QuickStats';
 import { calculateDashboardStats } from '../utils/tradingCalculations';
 import type { Trade } from '../types/trade';
 
@@ -29,7 +30,8 @@ export default function Dashboard({ trades = [] }: DashboardProps) {
     } catch (e) {
       return {
         totalPnl: 0, unrealizedPnl: 0, realizedPnl: 0, winRate: 0,
-        closedTradesCount: 0, openPositionsCount: 0, equityCurve: []
+        closedTradesCount: 0, openPositionsCount: 0, equityCurve: [],
+        avgWin: 0, avgLoss: 0, bestTrade: 0, worstTrade: 0
       };
     }
   }, [safeTrades]);
@@ -45,17 +47,35 @@ export default function Dashboard({ trades = [] }: DashboardProps) {
         <WinRateCard winRate={stats.winRate} />
       </div>
 
-      {/* Keep the chart and calendar proportioned and aligned as one compact row. */}
+      {/* 2. PERFORMANCE CHART & CALENDAR */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-5 items-stretch">
         <PerformanceChart trades={safeTrades} />
         <MonthlyCalendar trades={safeTrades} totalPnl={stats.totalPnl} />
       </div>
 
-      {/* 3. BOTTOM CARDS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <OpenPositions trades={safeTrades} />
-        <RecentActivity trades={safeTrades} />
-        <TopPerformers trades={safeTrades} />
+      {/* 3. BOTTOM CARDS - Using exactly the proportions from the reference image */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        {/* Compact width (Open Positions) */}
+        <div className="lg:col-span-3 flex flex-col h-full">
+          <OpenPositions trades={safeTrades} />
+        </div>
+        
+        {/* Medium width (Recent Activity) */}
+        <div className="lg:col-span-4 flex flex-col h-full">
+          <RecentActivity trades={safeTrades} />
+        </div>
+
+        {/* Wider section (Top Performers & Quick Stats stacked vertically) */}
+        <div className="lg:col-span-5 flex flex-col gap-5 h-full min-w-0">
+          <TopPerformers trades={safeTrades} />
+          <QuickStats 
+            avgWin={stats.avgWin} 
+            avgLoss={stats.avgLoss} 
+            bestTrade={stats.bestTrade} 
+            worstTrade={stats.worstTrade} 
+          />
+        </div>
       </div>
       
     </div>

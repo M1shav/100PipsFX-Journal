@@ -8,7 +8,8 @@ export default function WinRateCard({ winRate }: { winRate: number }) {
       </div>
       <div className="min-w-0 flex-1">
         <span className="block text-[11px] font-bold text-muted uppercase tracking-wider">WIN RATE</span>
-        <div className="text-[28px] xl:text-[30px] font-bold text-textMain mt-0.5 leading-tight tabular-nums">{winRate.toFixed(1)}%</div>
+        {/* Adjusted to font-black and exactly 2px smaller */}
+        <div className="text-[26px] xl:text-[28px] font-black text-textMain mt-0.5 leading-tight tabular-nums">{winRate.toFixed(1)}%</div>
         <div className="w-full bg-[#1C1C1E] h-1.5 rounded-full overflow-hidden mt-2.5">
           <div 
             className="bg-brand h-full rounded-full transition-all duration-1000" 

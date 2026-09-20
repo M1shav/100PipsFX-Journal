@@ -47,7 +47,8 @@ export default function StatCard({ title, value = 0, subtitle = '', icon: Custom
         <span className="block text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider truncate">
           {title}
         </span>
-        <span className={`block mt-0.5 whitespace-nowrap tabular-nums text-[28px] xl:text-[30px] font-bold tracking-tight leading-tight ${
+        {/* Adjusted to font-black and exactly 2px smaller */}
+        <span className={`block mt-0.5 whitespace-nowrap tabular-nums text-[26px] xl:text-[28px] font-black tracking-tight leading-tight ${
           isUnrealized
             ? 'text-white'
             : isPositive

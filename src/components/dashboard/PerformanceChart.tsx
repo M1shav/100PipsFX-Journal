@@ -32,7 +32,10 @@ export default function PerformanceChart({ trades }: PerformanceChartProps) {
 
   const chartData = useMemo(() => {
     const safeTrades = Array.isArray(trades) ? trades : [];
+    
+    // Set up strict calendar boundaries based on local time
     const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     const closedTrades = safeTrades
       .map(t => {
@@ -47,12 +50,24 @@ export default function PerformanceChart({ trades }: PerformanceChartProps) {
         if (timeRange === 'ALL') return true;
         const d = new Date(t.date);
         if (isNaN(d.getTime())) return false;
-        const diffDays = (now.getTime() - d.getTime()) / (1000 * 3600 * 24);
         
-        if (timeRange === '1D') return diffDays <= 1;
-        if (timeRange === '1W') return diffDays <= 7;
-        if (timeRange === '1M') return diffDays <= 30;
-        if (timeRange === '3M') return diffDays <= 90;
+        // Strict calendar-aware filtering
+        if (timeRange === '1D') {
+          return d.getTime() >= todayStart.getTime();
+        }
+        if (timeRange === '1W') {
+          const lastWeek = new Date(todayStart);
+          lastWeek.setDate(lastWeek.getDate() - 6); // 7 days inclusive of today
+          return d.getTime() >= lastWeek.getTime();
+        }
+        if (timeRange === '1M') {
+          const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          return d.getTime() >= firstOfMonth.getTime();
+        }
+        if (timeRange === '3M') {
+          const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+          return d.getTime() >= threeMonthsAgo.getTime();
+        }
         return true;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -70,6 +85,7 @@ export default function PerformanceChart({ trades }: PerformanceChartProps) {
       };
     });
 
+    // Anchor point so cumulative line always starts cleanly from $0.00
     if (dataPoints.length > 0) {
       const anchorDate = new Date(dataPoints[0].dateObj);
       anchorDate.setHours(anchorDate.getHours() - 12);
@@ -85,6 +101,7 @@ export default function PerformanceChart({ trades }: PerformanceChartProps) {
     return dataPoints;
   }, [trades, timeRange]);
 
+  // Calculations isolated purely to the filtered dataset
   const finalPnl = chartData.length > 0 ? chartData[chartData.length - 1].cumulative : 0;
   const isPositive = finalPnl >= 0;
   
@@ -184,7 +201,7 @@ export default function PerformanceChart({ trades }: PerformanceChartProps) {
             <span className="text-[11px] font-bold tracking-wider uppercase">Performance</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <span className={`text-[28px] xl:text-[32px] font-bold tracking-tight truncate ${isPositive ? 'text-[#0A84FF]' : 'text-[#FF453A]'}`}>
+            <span className={`text-[26px] xl:text-[30px] font-black tracking-tight truncate ${isPositive ? 'text-[#0A84FF]' : 'text-[#FF453A]'}`}>
               {finalPnl >= 0 ? '+' : '−'}${Math.abs(finalPnl).toFixed(2)}
             </span>
             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[12px] font-bold shadow-sm shrink-0 ${
@@ -216,7 +233,6 @@ export default function PerformanceChart({ trades }: PerformanceChartProps) {
         </div>
       </div>
 
-      {/* flex-1 handles the plot height dynamically based on the parent card, solving the artificial stretching bug */}
       <div 
         ref={containerRef} 
         className="relative w-full flex-1 min-h-[220px] select-none mt-4"
@@ -224,7 +240,7 @@ export default function PerformanceChart({ trades }: PerformanceChartProps) {
         onPointerLeave={clearHover}
         onPointerCancel={clearHover}
       >
-        {chartData.length === 0 ? (
+        {chartData.length <= 1 ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-muted">
             <LineChart className="w-8 h-8 mb-2 opacity-20" />
             <span className="text-[13px] font-medium">No closed trades in this period</span>

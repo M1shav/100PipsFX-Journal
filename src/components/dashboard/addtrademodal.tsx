@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Plus, TrendingUp, TrendingDown, ChevronDown, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { X, Plus, TrendingUp, TrendingDown, ChevronDown, Check, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronUp, Clock } from 'lucide-react';
 import type { Trade } from '../../types/trade';
 import { calculateTradeCore } from '../../utils/tradingCalculations';
 
@@ -13,6 +13,8 @@ const INSTRUMENTS = [
   { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar' },
   { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc' },
   { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar' },
+  { symbol: 'BTCUSD', name: 'Bitcoin' },
+  { symbol: 'ETHUSD', name: 'Ethereum' },
 ];
 
 const CHECKLIST_ITEMS = [
@@ -30,6 +32,176 @@ interface AddTradeModalProps {
   tradeToEdit?: Trade | null;
 }
 
+// --------------------------------------------------------------------------------
+// MOVED OUTSIDE: Prevents the 1-second clock re-render from destroying local state
+// --------------------------------------------------------------------------------
+const DatePickerPopup = ({ date, setDate, onClose }: { date: Date | null, setDate: (d: Date | null) => void, onClose: () => void }) => {
+  const [view, setView] = useState<'date' | 'time'>('date');
+  const [internalDate, setInternalDate] = useState<Date>(date || new Date());
+  const [viewMonth, setViewMonth] = useState<Date>(date || new Date());
+
+  const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
+  const days = Array.from({length: daysInMonth}, (_, i) => i + 1);
+  const today = new Date().getDate();
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const h = internalDate.getHours();
+  const m = internalDate.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayH = h % 12 === 0 ? 12 : h % 12;
+  const displayM = m.toString().padStart(2, '0');
+  const displayHStr = displayH.toString().padStart(2, '0');
+
+  const adjustTime = (type: 'h' | 'm', amount: number) => {
+    const d = new Date(internalDate);
+    if (type === 'h') {
+      let newH = d.getHours() + amount;
+      if (newH > 23) newH = 0;
+      if (newH < 0) newH = 23;
+      d.setHours(newH);
+    }
+    if (type === 'm') {
+      let newM = d.getMinutes() + amount;
+      if (newM > 59) newM = 0;
+      if (newM < 0) newM = 59;
+      d.setMinutes(newM);
+    }
+    setInternalDate(d);
+  };
+
+  const toggleAmPm = () => {
+    const d = new Date(internalDate);
+    d.setHours(d.getHours() >= 12 ? d.getHours() - 12 : d.getHours() + 12);
+    setInternalDate(d);
+  };
+
+  const handleDone = () => {
+    setDate(internalDate);
+    onClose();
+  };
+
+  const nextMonth = () => {
+    const d = new Date(viewMonth);
+    d.setMonth(d.getMonth() + 1);
+    setViewMonth(d);
+  };
+  
+  const prevMonth = () => {
+    const d = new Date(viewMonth);
+    d.setMonth(d.getMonth() - 1);
+    setViewMonth(d);
+  };
+
+  return (
+    <div className="absolute top-[105%] left-0 w-[280px] bg-[#0A0A0A] border border-[#1C1C1C] rounded-[20px] shadow-2xl p-3 z-50">
+      {view === 'date' ? (
+        <>
+          <div className="flex justify-between gap-2 mb-3">
+            <button onClick={() => { setDate(new Date()); onClose(); }} className="flex-1 bg-surface2 hover:bg-[#1C1C1C] text-textMain text-[11px] font-medium py-1.5 rounded-lg transition-colors">Now</button>
+            <button onClick={() => { setDate(new Date(Date.now() - 86400000)); onClose(); }} className="flex-1 bg-surface2 hover:bg-[#1C1C1C] text-textMain text-[11px] font-medium py-1.5 rounded-lg transition-colors">Yesterday</button>
+            <button onClick={() => { setDate(null); onClose(); }} className="flex-1 bg-surface2 hover:bg-[#1C1C1C] text-textMain text-[11px] font-medium py-1.5 rounded-lg transition-colors">Clear</button>
+          </div>
+          <div className="flex items-center justify-between px-2 mb-3">
+            <ChevronLeft className="w-4 h-4 text-muted cursor-pointer hover:text-white transition-colors" onClick={prevMonth} />
+            <span className="text-[13px] font-semibold text-textMain">
+              {new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(viewMonth)}
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted cursor-pointer hover:text-white transition-colors" onClick={nextMonth} />
+          </div>
+          <div className="grid grid-cols-7 text-center gap-1 mb-2">
+            {['SU','MO','TU','WE','TH','FR','SA'].map(d => <span key={d} className="text-[9px] font-semibold text-muted">{d}</span>)}
+          </div>
+          <div className="grid grid-cols-7 text-center gap-y-1 gap-x-1">
+            {(() => {
+              const firstDay = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1).getDay();
+              const pads = Array.from({length: firstDay}, (_, i) => i);
+              return pads.map(p => <span key={`pad-${p}`} className="text-[12px] text-[#333]"></span>);
+            })()}
+            {days.map(d => {
+              const isSelected = internalDate.getDate() === d && internalDate.getMonth() === viewMonth.getMonth() && internalDate.getFullYear() === viewMonth.getFullYear();
+              const isToday = today === d && currentMonth === viewMonth.getMonth() && currentYear === viewMonth.getFullYear();
+              return (
+                <button 
+                  key={d}
+                  onClick={() => {
+                    const newD = new Date(internalDate);
+                    newD.setFullYear(viewMonth.getFullYear(), viewMonth.getMonth(), d);
+                    setInternalDate(newD);
+                    setView('time'); 
+                  }}
+                  className={`w-7 h-7 flex items-center justify-center rounded-lg text-[12px] mx-auto transition-colors ${
+                    isSelected 
+                      ? 'bg-brand text-white font-semibold shadow-[0_0_10px_rgba(10,132,255,0.4)]' 
+                      : isToday ? 'text-brand font-semibold hover:bg-[#1C1C1E]' : 'text-textMain hover:bg-[#1C1C1E]'
+                  }`}
+                >
+                  {d}
+                </button>
+              )
+            })}
+          </div>
+          
+          <div className="mt-3 pt-3 border-t border-[#1C1C1C]">
+            <button onClick={() => setView('time')} className="w-full flex items-center justify-center gap-2 bg-[#121212] hover:bg-[#1C1C1E] py-2 rounded-xl text-muted hover:text-textMain text-[12px] font-semibold transition-colors">
+              <Clock className="w-3.5 h-3.5" /> Set Time
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <button 
+            onClick={() => setView('date')} 
+            className="w-full flex items-center gap-2 bg-[#121212] border border-[#1C1C1C] px-3 py-2.5 rounded-xl hover:bg-[#1C1C1E] transition-colors mb-5"
+          >
+            <ChevronLeft className="w-4 h-4 text-muted shrink-0" />
+            <CalendarIcon className="w-3.5 h-3.5 text-muted shrink-0" />
+            <span className="text-[12px] font-semibold text-textMain truncate">
+              {new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(internalDate)}
+            </span>
+          </button>
+
+          <div className="flex justify-center items-center gap-1.5 mb-4 text-muted text-[11px] font-medium uppercase tracking-wider">
+            <Clock className="w-3 h-3" /> Set Time
+          </div>
+
+          <div className="flex justify-center items-center gap-3 mb-6">
+            <div className="flex flex-col items-center gap-2">
+              <button onClick={() => adjustTime('h', 1)} className="w-9 h-8 bg-[#121212] hover:bg-[#1C1C1E] rounded-lg flex items-center justify-center border border-[#1C1C1E] transition-colors"><ChevronUp className="w-4 h-4 text-muted" /></button>
+              <span className="text-[24px] font-bold text-textMain w-9 text-center tabular-nums leading-none">{displayHStr}</span>
+              <button onClick={() => adjustTime('h', -1)} className="w-9 h-8 bg-[#121212] hover:bg-[#1C1C1E] rounded-lg flex items-center justify-center border border-[#1C1C1E] transition-colors"><ChevronDown className="w-4 h-4 text-muted" /></button>
+            </div>
+            
+            <span className="text-[20px] font-bold text-muted mb-1">:</span>
+
+            <div className="flex flex-col items-center gap-2">
+              <button onClick={() => adjustTime('m', 1)} className="w-9 h-8 bg-[#121212] hover:bg-[#1C1C1E] rounded-lg flex items-center justify-center border border-[#1C1C1E] transition-colors"><ChevronUp className="w-4 h-4 text-muted" /></button>
+              <span className="text-[24px] font-bold text-textMain w-9 text-center tabular-nums leading-none">{displayM}</span>
+              <button onClick={() => adjustTime('m', -1)} className="w-9 h-8 bg-[#121212] hover:bg-[#1C1C1E] rounded-lg flex items-center justify-center border border-[#1C1C1E] transition-colors"><ChevronDown className="w-4 h-4 text-muted" /></button>
+            </div>
+
+            <div className="flex flex-col justify-center ml-2">
+              <button onClick={toggleAmPm} className="bg-[#121212] hover:bg-[#1C1C1E] border border-[#1C1C1E] rounded-[10px] px-3 py-2 text-[12px] font-bold text-textMain transition-colors h-[32px] flex items-center justify-center">
+                {ampm}
+              </button>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleDone} 
+            className="w-full bg-[#0A84FF] hover:bg-[#0A84FF]/90 text-white font-semibold text-[13px] py-2.5 rounded-xl shadow-[0_0_15px_rgba(10,132,255,0.25)] transition-colors flex items-center justify-center gap-2"
+          >
+            <Check className="w-4 h-4 stroke-[3]" /> Done
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+
+// --------------------------------------------------------------------------------
+// MAIN MODAL COMPONENT
+// --------------------------------------------------------------------------------
 export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, tradeToEdit }: AddTradeModalProps) {
   const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
   const [symbol, setSymbol] = useState('');
@@ -48,10 +220,11 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
   
   const symbolRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const entryDateRef = useRef<HTMLDivElement>(null);
+  const exitDateRef = useRef<HTMLDivElement>(null);
 
   const suggestions = INSTRUMENTS.filter(i => i.symbol.toLowerCase().includes(symbol.toLowerCase()));
 
-  // PRE-FILL DATA WHEN EDITING A TRADE
   useEffect(() => {
     if (tradeToEdit) {
       setDirection(tradeToEdit.direction || 'LONG');
@@ -60,10 +233,8 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
       setEntryPrice(tradeToEdit.entry?.toString() || '');
       setExitPrice(tradeToEdit.exit ? tradeToEdit.exit.toString() : '');
       
-      // Load saved notes safely
       setNotes((tradeToEdit as any).notes || '');
       
-      // Load saved checklist safely, handle older trades without checklist data
       const savedChecklist = (tradeToEdit as any).checklist;
       if (Array.isArray(savedChecklist) && savedChecklist.length === CHECKLIST_ITEMS.length) {
         setChecklist(savedChecklist);
@@ -78,10 +249,17 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
     }
   }, [tradeToEdit]);
 
+  // Robust outside-click handling using explicit refs for the pickers
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (symbolRef.current && !symbolRef.current.contains(event.target as Node)) {
         setShowSymbolSuggestions(false);
+      }
+      if (entryDateRef.current && !entryDateRef.current.contains(event.target as Node)) {
+        setActiveDatePicker((prev) => prev === 'entry' ? null : prev);
+      }
+      if (exitDateRef.current && !exitDateRef.current.contains(event.target as Node)) {
+        setActiveDatePicker((prev) => prev === 'exit' ? null : prev);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -113,9 +291,8 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
     
     const { pnl } = calculateTradeCore(symbol, direction, entryNum, exitNum, lotNum);
 
-    // Create the updated trade object mapping ALL local states, including Checklist & Notes
     const newTrade = {
-      ...(tradeToEdit || {}), // PRESERVE ANY UNMODIFIED FIELDS
+      ...(tradeToEdit || {}), 
       id: tradeToEdit ? tradeToEdit.id : Date.now().toString(),
       date: entryDate ? entryDate.toISOString() : (tradeToEdit?.date || new Date().toISOString()),
       pair: symbol.toUpperCase(),
@@ -125,9 +302,9 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
       lotSize: lotNum,
       pnl: isClosed ? pnl : 0, 
       status: isClosed ? 'CLOSED' : 'OPEN',
-      notes,            // PERSIST NOTES
-      checklist         // PERSIST CHECKLIST
-    } as Trade;         // Typecast safely guarantees TS compiler acceptance
+      notes,            
+      checklist         
+    } as Trade;         
 
     if (tradeToEdit && onUpdateTrade) {
       onUpdateTrade(newTrade);
@@ -138,59 +315,10 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
     onClose();
   };
 
-  const DatePickerPopup = ({ date, setDate }: { date: Date | null, setDate: (d: Date | null) => void }) => {
-    const days = Array.from({length: 31}, (_, i) => i + 1);
-    const today = new Date().getDate();
-
-    return (
-      <div className="absolute top-[105%] left-0 w-[280px] bg-[#0A0A0A] border border-[#1C1C1C] rounded-[20px] shadow-2xl p-3 z-50">
-        <div className="flex justify-between gap-2 mb-3">
-          <button onClick={() => setDate(new Date())} className="flex-1 bg-surface2 hover:bg-[#1C1C1C] text-textMain text-[11px] font-medium py-1.5 rounded-lg transition-colors">Now</button>
-          <button onClick={() => setDate(new Date(Date.now() - 86400000))} className="flex-1 bg-surface2 hover:bg-[#1C1C1C] text-textMain text-[11px] font-medium py-1.5 rounded-lg transition-colors">Yesterday</button>
-          <button onClick={() => setDate(null)} className="flex-1 bg-surface2 hover:bg-[#1C1C1C] text-textMain text-[11px] font-medium py-1.5 rounded-lg transition-colors">Clear</button>
-        </div>
-        <div className="flex items-center justify-between px-2 mb-3">
-          <ChevronDown className="w-4 h-4 text-muted rotate-90 cursor-pointer" />
-          <span className="text-[13px] font-semibold text-textMain">Aug 2026</span>
-          <ChevronDown className="w-4 h-4 text-muted -rotate-90 cursor-pointer" />
-        </div>
-        <div className="grid grid-cols-7 text-center gap-1 mb-2">
-          {['SU','MO','TU','WE','TH','FR','SA'].map(d => <span key={d} className="text-[9px] font-semibold text-muted">{d}</span>)}
-        </div>
-        <div className="grid grid-cols-7 text-center gap-y-1 gap-x-1">
-          <span className="text-[12px] text-[#333]">26</span>
-          <span className="text-[12px] text-[#333]">27</span>
-          <span className="text-[12px] text-[#333]">28</span>
-          <span className="text-[12px] text-[#333]">29</span>
-          <span className="text-[12px] text-[#333]">30</span>
-          <span className="text-[12px] text-[#333]">31</span>
-          {days.map(d => (
-            <button 
-              key={d}
-              onClick={() => {
-                const newD = new Date();
-                newD.setDate(d);
-                setDate(newD);
-                setActiveDatePicker(null);
-              }}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg text-[12px] mx-auto transition-colors ${
-                date?.getDate() === d 
-                  ? 'bg-brand text-white font-semibold shadow-[0_0_10px_rgba(10,132,255,0.4)]' 
-                  : d === today ? 'text-brand font-semibold' : 'text-textMain hover:bg-[#1C1C1C]'
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-      <div ref={modalRef} className="bg-[#050505] w-full max-w-[500px] rounded-[24px] border border-[#1C1C1C] shadow-2xl relative z-10 flex flex-col max-h-[90vh] overflow-y-auto scrollbar-hide">
+      <div ref={modalRef} className="bg-[#050505] w-full max-w-[640px] rounded-[24px] border border-[#1C1C1C] shadow-2xl relative z-10 flex flex-col max-h-[90vh] overflow-y-auto scrollbar-hide">
         
         <div className="flex items-center justify-between p-5 pb-4">
           <div className="flex items-center gap-3">
@@ -292,7 +420,7 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
               />
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={entryDateRef}>
               <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Entry Date</label>
               <div 
                 onClick={() => setActiveDatePicker(activeDatePicker === 'entry' ? null : 'entry')}
@@ -303,10 +431,10 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
                   {entryDate ? formatDate(entryDate) : 'Select date'}
                 </span>
               </div>
-              {activeDatePicker === 'entry' && <DatePickerPopup date={entryDate} setDate={setEntryDate} />}
+              {activeDatePicker === 'entry' && <DatePickerPopup date={entryDate} setDate={setEntryDate} onClose={() => setActiveDatePicker(null)} />}
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={exitDateRef}>
               <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Exit Date</label>
               <div 
                 onClick={() => setActiveDatePicker(activeDatePicker === 'exit' ? null : 'exit')}
@@ -317,7 +445,7 @@ export default function AddTradeModal({ onClose, onAddTrade, onUpdateTrade, trad
                   {exitDate ? formatDate(exitDate) : 'Optional'}
                 </span>
               </div>
-              {activeDatePicker === 'exit' && <DatePickerPopup date={exitDate} setDate={setExitDate} />}
+              {activeDatePicker === 'exit' && <DatePickerPopup date={exitDate} setDate={setExitDate} onClose={() => setActiveDatePicker(null)} />}
             </div>
             
           </div>
